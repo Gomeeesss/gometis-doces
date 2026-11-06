@@ -1,0 +1,20 @@
+GOMETIS DOCES - CONTROLE FINANCEIRO (app instalavel)
+
+COMO PUBLICAR (gratis, 5 minutos)
+1. Descompacte este arquivo .zip. Voce vai ter uma pasta com index.html, sw.js, manifest.webmanifest e os icones.
+2. Acesse app.netlify.com/drop (crie uma conta gratuita se pedir).
+3. Arraste a PASTA inteira para a area indicada. Em alguns segundos voce recebe um endereco https (ex.: nome-aleatorio.netlify.app).
+4. Em Configuracoes do site > Mudar nome do site, escolha algo como gometis-doces.
+
+COMO INSTALAR NO CELULAR
+- Android (Chrome): abra o endereco, toque no menu e em "Instalar app" (ou "Adicionar a tela inicial").
+- iPhone (Safari): abra o endereco, toque em Compartilhar e em "Adicionar a Tela de Inicio".
+- Computador (Chrome/Edge): clique no icone de instalar na barra de enderecos.
+
+PASSAR OS DADOS DO APP ANTIGO
+No app antigo: Ajustes > Gerar backup > Copiar. No app novo: Ajustes > cole em "Restaurar" > Restaurar.
+
+IMPORTANTE
+- Abra o app uma vez com internet; depois ele funciona offline.
+- Os dados ficam salvos no aparelho. Faca backup de vez em quando em Ajustes.
+- Para atualizar o app no futuro, publique os arquivos novos no mesmo site. Se mudar o app, troque 'gometis-v1' por 'gometis-v2' no arquivo sw.js.
