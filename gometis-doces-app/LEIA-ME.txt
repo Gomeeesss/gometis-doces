@@ -18,3 +18,5 @@ IMPORTANTE
 - Abra o app uma vez com internet; depois ele funciona offline.
 - Os dados ficam salvos no aparelho. Faca backup de vez em quando em Ajustes.
 - Para atualizar o app no futuro, publique os arquivos novos no mesmo site. Se mudar o app, troque 'gometis-v1' por 'gometis-v2' no arquivo sw.js.
+
+NUVEM (LOGIN): veja PASSO-A-PASSO-NUVEM.txt. Enquanto o config.js tiver 'COLE_AQUI', o app funciona normalmente sem login.

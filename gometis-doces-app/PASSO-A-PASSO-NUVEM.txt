@@ -1,0 +1,15 @@
+LIGAR O APP À NUVEM (login + dados em qualquer aparelho)
+
+1. Crie uma conta grátis em supabase.com e clique em "New project".
+   Nome: gometis. Anote a senha do banco. Região: South America (São Paulo).
+2. Menu "SQL Editor" > "New query". Abra o arquivo supabase.sql, copie tudo, cole e clique em "Run".
+3. Menu "Authentication": para testar rápido, desligue "Confirm email" no provedor Email.
+   Em "URL Configuration", coloque em "Site URL" o endereço do seu app.
+4. "Project Settings" > "API": copie a "Project URL" e a chave pública (anon ou publishable).
+   NÃO copie a chave secreta / service_role.
+5. No GitHub, na pasta do app, abra config.js, clique no lápis, cole os dois valores entre as aspas e clique em "Commit changes".
+6. Envie também os outros arquivos novos (index.html, sw.js) com "Add file > Upload files".
+7. Abra o app duas vezes. Vai aparecer a tela de login: toque em "Criar conta".
+   Os dados que já estavam neste aparelho sobem para a nuvem automaticamente.
+
+Os nomes dos menus do Supabase podem mudar um pouco com o tempo.
