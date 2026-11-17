@@ -145,6 +145,12 @@ a.btn2,a.btn{text-decoration:none;display:inline-block;color:var(--ink)}a.btn{co
 .msg{border-radius:14px;padding:11px 14px;max-width:92%;overflow-wrap:anywhere}.msg.u{background:var(--ac);color:var(--acfg);align-self:flex-end}.msg.a{background:var(--sf2);align-self:flex-start}
 .msg ul{margin:4px 0;padding-left:20px}.chat{display:flex;flex-direction:column;gap:10px}
 .sugs{display:flex;gap:8px;flex-wrap:wrap}.sugs button{border:1px solid var(--ln);background:var(--sf);border-radius:99px;padding:7px 12px;font-size:13.5px;font-weight:600;color:var(--ink)}.sugs button:hover{background:var(--sf2)}
+.chw{position:relative}.chw svg{display:block;width:100%;height:auto;touch-action:pan-y;overflow:visible}
+.tip{position:absolute;top:0;left:0;pointer-events:none;background:var(--sf);color:var(--ink);border:1px solid var(--ln);border-radius:10px;padding:8px 10px;font-size:13px;box-shadow:0 8px 22px rgba(0,0,0,.2);min-width:160px;z-index:3}
+.tip .tt{font-weight:700;margin-bottom:4px;text-transform:capitalize}.tip .tr{display:flex;align-items:center;gap:8px}.tip .tr span{flex:1}.tip .tr b{font-weight:700}.tip .tr i{width:12px;height:3px;border-radius:2px;display:inline-block;flex:none}
+.key{display:flex;gap:16px;flex-wrap:wrap;font-size:13.5px;color:var(--mut)}.key span{display:inline-flex;align-items:center;gap:7px}.key i{width:14px;height:3px;border-radius:2px;display:inline-block}.key i.dash{background:repeating-linear-gradient(90deg,currentColor 0 4px,transparent 4px 7px)!important;color:var(--mut)}
+.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:16px}
+.kpi{font:700 22px/1.2 var(--fd)}
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:11px;font-size:14px;z-index:40;max-width:calc(100% - 32px);text-align:center;opacity:0;pointer-events:none;transition:opacity .2s}
 #toast.on{opacity:1}
 @media (max-width:860px){
@@ -838,18 +844,86 @@ function vMetas(){
   return h+'<div class="grid" style="margin-top:16px">'+m.metas.map(function(g){var p=g.alvo>0?Math.min(100,g.guardado/g.alvo*100):0,falta=Math.max(0,g.alvo-g.guardado),ms=0;if(g.prazo&&falta){ms=(+g.prazo.slice(0,4)-+today().slice(0,4))*12+(+g.prazo.slice(5,7)-+today().slice(5,7))}
     return '<div class="pn"><h2>'+esc(g.nome)+'<span class="sm mut">'+p.toFixed(0)+'%</span></h2><div style="font:700 21px var(--fd)">'+R(g.guardado)+' <span class="sm mut" style="font-family:var(--fb)">de '+R(g.alvo)+'</span></div><div class="bar"><i style="width:'+p.toFixed(1)+'%;background:'+esc(g.cor)+'"></i></div><div class="sm mut">'+(falta?'Faltam '+R(falta)+(g.prazo?' até '+g.prazo.slice(8,10)+'/'+g.prazo.slice(5,7)+'/'+g.prazo.slice(0,4):'')+(ms>0?' · '+R(Math.ceil(falta/ms))+' por mês':''):'Meta alcançada')+'</div><div class="fr"><button class="btn" onclick="A.guardar(\''+g.id+'\')">Guardar dinheiro</button><button class="btn2" onclick="A.meta(\''+g.id+'\')">Editar</button></div></div>'}).join('')+'</div>';
 }
+/* ---------- gráficos ---------- */
+var CH={},PER=6;try{PER=+localStorage.getItem('sf-per')||6}catch(e){}
+function niceT(lo,hi,n){if(hi<=lo)hi=lo+100;var sp=hi-lo,st=Math.pow(10,Math.floor(Math.log10(sp/n))),e=sp/n/st;if(e>=7.5)st*=10;else if(e>=3.5)st*=5;else if(e>=1.5)st*=2;var a=Math.floor(lo/st)*st,b=Math.ceil(hi/st)*st,t=[];for(var v=a;v<=b+st/2;v+=st)t.push(Math.round(v));return t}
+function fK(c){if(PRIV)return '•••';var v=c/100,a=Math.abs(v),sg=v<0?'-':'',r=function(x,d){return x.toFixed(d).replace('.',',').replace(/,0$/,'')};if(a>=1e6)return sg+'R$ '+r(a/1e6,1)+' mi';if(a>=1000)return sg+'R$ '+r(a/1000,a>=10000?0:1)+' mil';return sg+'R$ '+Math.round(a)}
+function chW(half){var w=Math.max(320,Math.min(1000,innerWidth-(innerWidth>860?300:40)));return half&&innerWidth>1180?Math.round((w-16)/2):w}
+function lineChart(id,labels,series,o){
+  o=o||{};var W=chW(o.half);if(W<560)o.end=false;var H=o.h||230,pl=W<560?52:66,pr=o.end?104:18,pt=16,pb=30,n=labels.length,vals=[];
+  series.forEach(function(sr){sr.vals.forEach(function(v){if(v!=null)vals.push(v)})});if(!vals.length)vals=[0];
+  var lo=Math.min.apply(null,vals),hi=Math.max.apply(null,vals);if(o.zero!==false)lo=Math.min(0,lo),hi=Math.max(0,hi);
+  var tk=niceT(lo,hi,4),y0=tk[0],y1=tk[tk.length-1];
+  var X=function(i){return n>1?pl+i*(W-pl-pr)/(n-1):pl+(W-pl-pr)/2},Y=function(v){return pt+(y1-v)*(H-pt-pb)/(y1-y0||1)};
+  var sv='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(o.aria||'')+'">';
+  tk.forEach(function(t){var y=Y(t).toFixed(1);sv+='<line x1="'+pl+'" x2="'+(W-pr)+'" y1="'+y+'" y2="'+y+'" stroke="var(--ln)" stroke-width="'+(t===0?1.5:1)+'"/><text x="'+(pl-8)+'" y="'+y+'" dy="4" text-anchor="end" font-size="12" fill="var(--mut)">'+fK(t)+'</text>'});
+  var every=o.every||Math.ceil(n/7);labels.forEach(function(l,i){if(i%every&&i!==n-1)return;if(i===n-1&&i%every&&(n-1)%every<every*0.6)return;sv+='<text x="'+X(i).toFixed(1)+'" y="'+(H-8)+'" text-anchor="middle" font-size="12" fill="var(--mut)">'+esc(l)+'</text>'});
+  series.forEach(function(sr){
+    var d='',pen=false,first=-1,last=-1;sr.vals.forEach(function(v,i){if(v==null){pen=false;return}d+=(pen?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1);pen=true;if(first<0)first=i;last=i});
+    if(sr.area&&first>=0)sv+='<path d="'+d+'L'+X(last).toFixed(1)+' '+Y(Math.max(y0,0)).toFixed(1)+'L'+X(first).toFixed(1)+' '+Y(Math.max(y0,0)).toFixed(1)+'Z" fill="'+sr.cor+'" fill-opacity=".14"/>';
+    sv+='<path d="'+d+'" fill="none" stroke="'+sr.cor+'" stroke-width="2.25" stroke-linejoin="round" stroke-linecap="round"'+(sr.dash?' stroke-dasharray="5 5"':'')+'/>';
+    if(n<=13&&!sr.dash)sr.vals.forEach(function(v,i){if(v!=null)sv+='<circle cx="'+X(i).toFixed(1)+'" cy="'+Y(v).toFixed(1)+'" r="3" fill="'+sr.cor+'" stroke="var(--sf)" stroke-width="2"/>'});
+    sr._last=last;
+  });
+  if(o.end){var ends=series.filter(function(sr){return sr._last>=0}).map(function(sr){return{sr:sr,y:Y(sr.vals[sr._last]),x:X(sr._last)}}).sort(function(a,b){return a.y-b.y});
+    ends.forEach(function(e){e.ly=e.y});for(var k=1;k<ends.length;k++)if(ends[k].ly-ends[k-1].ly<18)ends[k].ly=ends[k-1].ly+18;var ov=ends.length?ends[ends.length-1].ly-(H-pb):0;if(ov>0)ends.forEach(function(e){e.ly-=ov});
+    ends.forEach(function(e){var ly=(e.ly==null?e.y:e.ly),lx=W-pr+10;sv+='<line x1="'+(e.x+5).toFixed(1)+'" y1="'+e.y.toFixed(1)+'" x2="'+(lx-3)+'" y2="'+ly.toFixed(1)+'" stroke="var(--ln)" stroke-width="1"/><text x="'+lx+'" y="'+ly.toFixed(1)+'" dy="4" font-size="12.5" font-weight="600" fill="var(--ink)">'+esc(e.sr.curto||e.sr.nome)+'</text>'});}
+  sv+='<g id="'+id+'-hv" style="display:none"><line id="'+id+'-hl" y1="'+pt+'" y2="'+(H-pb)+'" stroke="var(--mut)" stroke-width="1"/>'+series.map(function(sr,j){return '<circle id="'+id+'-hc'+j+'" r="5" fill="'+sr.cor+'" stroke="var(--sf)" stroke-width="2.5"/>'}).join('')+'</g>';
+  sv+='<rect x="'+pl+'" y="0" width="'+(W-pl-pr)+'" height="'+H+'" fill="transparent" onpointermove="A.chHv(event,\''+id+'\')" onpointerdown="A.chHv(event,\''+id+'\')" onpointerleave="A.chOut(\''+id+'\')"/></svg>';
+  CH[id]={W:W,n:n,X:X,Y:Y,series:series,tl:o.tip||labels,extra:o.extra,fmt:o.fmt||R};
+  return '<div class="chw"><div>'+sv+'</div><div class="tip" id="'+id+'-tp" hidden></div></div>';
+}
+function colChart(id,labels,vals,o){
+  o=o||{};var W=chW(o.half),H=o.h||210,pl=58,pr=12,pt=22,pb=30,n=labels.length,v2=vals.filter(function(v){return v!=null});if(!v2.length)v2=[0];
+  var tk=niceT(Math.min(0,Math.min.apply(null,v2)),Math.max(0,Math.max.apply(null,v2)),4),y0=tk[0],y1=tk[tk.length-1],bw=Math.min(24,(W-pl-pr)/n*0.5);
+  var X=function(i){return pl+(i+.5)*(W-pl-pr)/n},Y=function(v){return pt+(y1-v)*(H-pt-pb)/(y1-y0||1)};
+  var sv='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(o.aria||'')+'">';
+  tk.forEach(function(t){var y=Y(t).toFixed(1);sv+='<line x1="'+pl+'" x2="'+(W-pr)+'" y1="'+y+'" y2="'+y+'" stroke="var(--ln)" stroke-width="'+(t===0?1.5:1)+'"/><text x="'+(pl-8)+'" y="'+y+'" dy="4" text-anchor="end" font-size="12" fill="var(--mut)">'+o.ax(t)+'</text>'});
+  vals.forEach(function(v,i){var x=X(i);sv+='<text x="'+x.toFixed(1)+'" y="'+(H-8)+'" text-anchor="middle" font-size="12" fill="var(--mut)">'+esc(labels[i])+'</text>';if(v==null)return;
+    var ya=Y(Math.max(v,0)),yb=Y(Math.min(v,0)),h=Math.max(1,yb-ya),r=Math.min(4,h/2),up=v>=0,c=up?'var(--pos)':'var(--neg)',x0=x-bw/2;
+    var d=up?'M'+x0+' '+yb+'V'+(ya+r)+'Q'+x0+' '+ya+' '+(x0+r)+' '+ya+'H'+(x0+bw-r)+'Q'+(x0+bw)+' '+ya+' '+(x0+bw)+' '+(ya+r)+'V'+yb+'Z':'M'+x0+' '+ya+'V'+(yb-r)+'Q'+x0+' '+yb+' '+(x0+r)+' '+yb+'H'+(x0+bw-r)+'Q'+(x0+bw)+' '+yb+' '+(x0+bw)+' '+(yb-r)+'V'+ya+'Z';
+    sv+='<path d="'+d+'" fill="'+c+'"/><text x="'+x.toFixed(1)+'" y="'+(up?ya-6:yb+14).toFixed(1)+'" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--ink)">'+o.lab(v)+'</text>'});
+  return '<div class="chw">'+sv+'</svg></div>';
+}
+function cumDesp(ym,all,upto){var n=new Date(+ym.slice(0,4),+ym.slice(5,7),0).getDate(),a=[],day={};all.forEach(function(t){if(t.t==='d'&&!t.aj&&t.d.slice(0,7)===ym){var d=+t.d.slice(8,10);day[d]=(day[d]||0)+t.v}});var s2=0;for(var i=1;i<=n;i++){s2+=day[i]||0;a.push(upto&&i>upto?null:s2)}return a}
 function vRel(all){
-  var L=[],mx=1;for(var i=5;i>=0;i--){var ym=ymAdd(cur,-i),o=mesTot(ym,all);L.push({ym:ym,o:o});mx=Math.max(mx,o.r,o.d)}
-  var W=600,H=200,bw=30,gp=W/6,s='<svg viewBox="0 0 '+W+' '+(H+34)+'" style="width:100%;min-width:420px" role="img" aria-label="Receitas e despesas dos últimos 6 meses"><line x1="0" y1="'+H+'" x2="'+W+'" y2="'+H+'" stroke="var(--ln)"/>';
-  L.forEach(function(x,j){var cx=gp*j+gp/2,hr=x.o.r/mx*(H-16),hd=x.o.d/mx*(H-16);s+='<rect x="'+(cx-bw-2)+'" y="'+(H-hr)+'" width="'+bw+'" height="'+hr+'" rx="4" fill="var(--pos)"/><rect x="'+(cx+2)+'" y="'+(H-hd)+'" width="'+bw+'" height="'+hd+'" rx="4" fill="var(--neg)"/><text x="'+cx+'" y="'+(H+22)+'" text-anchor="middle" font-size="14" fill="var(--mut)">'+MES[+x.ym.slice(5,7)-1].slice(0,3)+'</text>'});
-  s+='</svg>';
-  var o=L[5].o,ps=catParts(o);
-  var h='<div class="pn"><h2>Receitas e despesas, últimos 6 meses</h2><div class="lg" style="flex-direction:row;gap:16px;flex:none"><div><i style="background:var(--pos)"></i>Receitas</div><div><i style="background:var(--neg)"></i>Despesas</div></div><div class="tw">'+s+'</div><div class="tw"><table><tr><th>Mês</th><th class="n">Receitas</th><th class="n">Despesas</th><th class="n">Balanço</th></tr>'+L.map(function(x){return '<tr><td style="text-transform:capitalize">'+ymName(x.ym)+'</td><td class="n pos">'+R(x.o.r)+'</td><td class="n neg">'+R(x.o.d)+'</td><td class="n '+(x.o.b<0?'neg':'')+'"><b>'+R(x.o.b)+'</b></td></tr>'}).join('')+'</table></div></div>';
+  var nowYm=today().slice(0,7),N=PER,L=[];for(var i=N-1;i>=0;i--){var ym=ymAdd(cur,-i);L.push({ym:ym,o:mesTot(ym,all)})}
+  var ab=function(ym){return MES[+ym.slice(5,7)-1].slice(0,3)+(N>6&&ym.slice(5,7)==='01'?' '+ym.slice(2,4):'')},labs=L.map(function(x){return ab(x.ym)}),tips=L.map(function(x){return ymName(x.ym)+(x.ym>nowYm?' (previsto)':'')});
+  var h='<div class="fr" style="align-items:center"><div class="seg" style="flex:0 1 260px">'+[6,12].map(function(p){return '<button class="'+(N===p?'on':'')+'" onclick="A.per('+p+')">'+p+' meses</button>'}).join('')+'</div><span class="sm mut">até '+ymName(cur)+'</span></div>';
+  // 1. receitas x despesas
+  var mr=L.reduce(function(a,x){return a+x.o.r},0)/N,md=L.reduce(function(a,x){return a+x.o.d},0)/N;
+  h+='<div class="pn"><h2>Receitas e despesas</h2><div class="key"><span><i style="background:var(--pos)"></i>Receitas · média '+R(Math.round(mr))+'</span><span><i style="background:var(--neg)"></i>Despesas · média '+R(Math.round(md))+'</span></div>'
+   +lineChart('cRD',labs,[{nome:'Receitas',cor:'var(--pos)',vals:L.map(function(x){return x.o.r})},{nome:'Despesas',cor:'var(--neg)',vals:L.map(function(x){return x.o.d})}],{tip:tips,end:true,aria:'Receitas e despesas por mês',extra:function(i){var b=L[i].o.b;return ['Balanço',(b>0?'+ ':'')+R(b)]}})
+   +'<details><summary>Ver em tabela</summary><div class="tw"><table><tr><th>Mês</th><th class="n">Receitas</th><th class="n">Despesas</th><th class="n">Balanço</th></tr>'+L.map(function(x){return '<tr><td style="text-transform:capitalize">'+ymName(x.ym)+'</td><td class="n pos">'+R(x.o.r)+'</td><td class="n neg">'+R(x.o.d)+'</td><td class="n '+(x.o.b<0?'neg':'pos')+'"><b>'+R(x.o.b)+'</b></td></tr>'}).join('')+'</table></div></details></div>';
+  // 2. evolução do saldo e 3. ritmo de gastos
+  var m=M(),sal=L.map(function(x){return x.ym<nowYm?m.contas.reduce(function(a,c){return a+saldoConta(c,all,fimMes(x.ym))},0):x.ym===nowYm?m.contas.reduce(function(a,c){return a+saldoConta(c,all)},0):projecao(all,fimMes(x.ym)).end.v});
+  var dv=sal[sal.length-1]-sal[0];
+  h+='<div class="g2"><div class="pn"><h2>Evolução do saldo</h2><div><div class="kpi">'+R(sal[sal.length-1])+'</div><div class="sm mut">'+(dv>=0?'Cresceu ':'Caiu ')+R(Math.abs(dv))+' desde '+ymName(L[0].ym)+'</div></div>'
+   +lineChart('cSA',labs,[{nome:'Saldo em contas',cor:'var(--ac)',vals:sal,area:true}],{half:1,h:200,tip:tips.map(function(t,i){return t+(L[i].ym<nowYm?' · no fim do mês':L[i].ym===nowYm?' · hoje':'')}),aria:'Saldo total em contas mês a mês'})+'</div>';
+  var nd=new Date(+cur.slice(0,4),+cur.slice(5,7),0).getDate(),upto=cur===nowYm?+today().slice(8,10):cur>nowYm?0:nd,este=cumDesp(cur,all,upto),prev=[1,2,3].map(function(k){return cumDesp(ymAdd(cur,-k),all)}),med=[];
+  for(var d=1;d<=nd;d++)med.push(Math.round(prev.reduce(function(a,p){return a+p[Math.min(d,p.length)-1]},0)/3));
+  var ate=upto?este[upto-1]:0,ref=upto?med[upto-1]:0,dif=ref?Math.round((ate/ref-1)*100):0;
+  h+='<div class="pn"><h2>Ritmo de gastos em '+MES[+cur.slice(5,7)-1]+'</h2><div><div class="kpi">'+R(ate)+'</div><div class="sm mut">'+(cur>nowYm?'O mês ainda não começou.':ref?'Gasto até '+(cur===nowYm?'hoje':'o fim do mês')+': '+(Math.abs(dif)<5?'igual ao normal':Math.abs(dif)+'% '+(dif>0?'acima':'abaixo')+' do normal')+' para '+(cur===nowYm?'esta altura do mês':'um mês inteiro')+'.':'Sem meses anteriores para comparar.')+'</div></div>'
+   +'<div class="key"><span><i style="background:var(--ac)"></i>Este mês</span><span><i class="dash"></i>Média dos 3 meses anteriores</span></div>'
+   +lineChart('cRT',Array.from({length:nd},function(_,i){return String(i+1)}),[{nome:'Este mês',cor:'var(--ac)',vals:este,area:true},{nome:'Média de 3 meses',cor:'var(--mut)',vals:med,dash:true}],{half:1,h:200,every:5,tip:Array.from({length:nd},function(_,i){return 'Até o dia '+(i+1)}),aria:'Despesas acumuladas no mês, comparadas com a média'})+'</div></div>';
+  // 4. categorias ao longo do tempo
+  var tot={};L.forEach(function(x){Object.keys(x.o.cat).forEach(function(c){tot[c]=(tot[c]||0)+x.o.cat[c]})});
+  var top=Object.keys(tot).sort(function(a,b){return tot[b]-tot[a]}).slice(0,4);
+  if(top.length)h+='<div class="pn"><h2>Para onde vai o dinheiro</h2><div class="sm mut">As '+top.length+' categorias com mais gastos no período, mês a mês.</div><div class="key">'+top.map(function(c){return '<span><i style="background:'+esc(cat(c).cor)+'"></i>'+esc(cat(c).nome)+' · '+R(Math.round(tot[c]/N))+'/mês</span>'}).join('')+'</div>'
+   +lineChart('cCT',labs,top.map(function(c){return{nome:cat(c).nome,cor:cat(c).cor,vals:L.map(function(x){return x.o.cat[c]||0})}}),{end:true,tip:tips,aria:'Gastos das principais categorias por mês'})+'</div>';
+  // 5. quanto você guarda
+  var tx=L.map(function(x){return x.o.r?Math.round((x.o.r-x.o.d)/x.o.r*100):null}),ok=tx.filter(function(v){return v!=null}),avg=ok.length?Math.round(ok.reduce(function(a,b){return a+b},0)/ok.length):0;
+  h+='<div class="pn"><h2>Quanto você guarda</h2><div><div class="kpi">'+(ok.length?avg+'%':'—')+'</div><div class="sm mut">Média da parte das receitas que sobrou em cada mês. Uma meta comum é guardar 20%.</div></div>'
+   +colChart('cEC',labs,tx,{h:200,ax:function(t){return t+'%'},lab:function(v){return v+'%'},aria:'Percentual das receitas guardado por mês'})+'</div>';
+  // categorias do mês
+  var o=L[L.length-1].o,ps=catParts(o);
   h+='<div class="pn"><h2>Despesas por categoria em '+ymName(cur)+'</h2>'+donut(ps,o.d)+(ps.length?'<div class="tw"><table><tr><th>Categoria</th><th class="n">Valor</th><th class="n">Parte do total</th></tr>'+ps.map(function(p){return '<tr><td>'+esc(p.nome)+'</td><td class="n">'+R(p.v)+'</td><td class="n">'+(p.v/o.d*100).toFixed(1).replace('.',',')+'%</td></tr>'}).join('')+'</table></div>':'')+'</div>';
-  h+='<div class="pn"><h2>Planilhas</h2><div class="mut">Traga lançamentos de uma planilha do Excel, do Google Planilhas ou do extrato do banco, ou baixe tudo o que está no app.</div><div class="fr"><button class="btn" onclick="A.planilha()">Importar planilha</button><button class="btn2" onclick="A.xlsx()">Baixar em Excel</button><button class="btn2" onclick="A.csv()">Baixar em CSV</button><button class="lk" onclick="A.modelo()">Baixar planilha modelo</button></div></div>';
-  h+='<div class="pn"><h2>Backup completo</h2><div class="mut">Guarde uma cópia de tudo (contas, cartões, transações, contas fixas, metas e categorias) em um arquivo. Com ele você recupera os dados se algo der errado.</div><div class="fr" style="align-items:center"><button class="btn2" onclick="A.backup()">Baixar backup</button><label class="btn2" style="flex:none;flex-direction:row;color:var(--ink);font-size:15px;cursor:pointer">Restaurar backup<input type="file" id="bk-f" accept=".json,application/json" onchange="A.restore(this)" hidden></label></div></div>';
+  h+=RELREST;
   return '<div style="display:flex;flex-direction:column;gap:16px">'+h+'</div>';
 }
+var RELREST='<div class="pn"><h2>Planilhas</h2><div class="mut">Traga lançamentos de uma planilha do Excel, do Google Planilhas ou do extrato do banco, ou baixe tudo o que está no app.</div><div class="fr"><button class="btn" onclick="A.planilha()">Importar planilha</button><button class="btn2" onclick="A.xlsx()">Baixar em Excel</button><button class="btn2" onclick="A.csv()">Baixar em CSV</button><button class="lk" onclick="A.modelo()">Baixar planilha modelo</button></div></div>'+
+'<div class="pn"><h2>Backup completo</h2><div class="mut">Guarde uma cópia de tudo (contas, cartões, transações, contas fixas, metas e categorias) em um arquivo. Com ele você recupera os dados se algo der errado.</div><div class="fr" style="align-items:center"><button class="btn2" onclick="A.backup()">Baixar backup</button><label class="btn2" style="flex:none;flex-direction:row;color:var(--ink);font-size:15px;cursor:pointer">Restaurar backup<input type="file" id="bk-f" accept=".json,application/json" onchange="A.restore(this)" hidden></label></div></div>';
+
 function vCats(){
   var m=M();function bl(tp,tt){return '<div class="pn"><h2>'+tt+' <button class="lk" onclick="A.cat(null,\''+tp+'\')">Adicionar</button></h2>'+m.cats.filter(function(c){return c.tipo===tp}).map(function(c){return '<button class="row" onclick="A.cat(\''+c.id+'\')"><span class="dot" style="background:'+esc(c.cor)+'">'+esc(c.nome.charAt(0).toUpperCase())+'</span><span class="tx"><b>'+esc(c.nome)+'</b></span><span class="mut sm">Editar</span></button>'}).join('')+'</div>'}
   return '<div class="grid">'+bl('d','Categorias de despesa')+bl('r','Categorias de receita')+'</div>';
@@ -1092,6 +1166,17 @@ var A=window.A={
     m.cats=m.cats.filter(function(c){return !c.demo||usadas[c.id]});
     mark('meta');hold--;draw();toast('Demonstração apagada: '+n+' lançamentos removidos. Seus dados continuam aqui.');
   },
+  per:function(p){PER=p;try{localStorage.setItem('sf-per',p)}catch(e){}draw()},
+  chHv:function(ev,id){
+    var c=CH[id];if(!c)return;var sv=ev.currentTarget.ownerSVGElement,r=sv.getBoundingClientRect(),k=c.W/r.width,x=(ev.clientX-r.left)*k,best=0,bd=1e9;
+    for(var i=0;i<c.n;i++){var dd=Math.abs(c.X(i)-x);if(dd<bd){bd=dd;best=i}}
+    var g=$(id+'-hv');g.style.display='';var xx=c.X(best);$(id+'-hl').setAttribute('x1',xx);$(id+'-hl').setAttribute('x2',xx);
+    var rows='';c.series.forEach(function(sr,j){var v=sr.vals[best],ci=$(id+'-hc'+j);if(v==null){ci.style.display='none';return}ci.style.display='';ci.setAttribute('cx',xx);ci.setAttribute('cy',c.Y(v));rows+='<div class="tr"><i style="background:'+sr.cor+'"></i><span>'+esc(sr.nome)+'</span><b>'+c.fmt(v)+'</b></div>'});
+    if(c.extra){var e=c.extra(best);rows+='<div class="tr" style="border-top:1px solid var(--ln);margin-top:4px;padding-top:4px"><span>'+esc(e[0])+'</span><b>'+e[1]+'</b></div>'}
+    var tp=$(id+'-tp');tp.innerHTML='<div class="tt">'+esc(c.tl[best])+'</div>'+rows;tp.hidden=false;
+    var px=xx/k,w=tp.offsetWidth,left=px+14;if(left+w>r.width)left=px-w-14;tp.style.transform='translate('+Math.max(0,left)+'px,8px)';
+  },
+  chOut:function(id){var g=$(id+'-hv'),tp=$(id+'-tp');if(g)g.style.display='none';if(tp)tp.hidden=true},
   priv:function(){PRIV=!PRIV;try{localStorage.setItem('bolso-priv',PRIV?'1':'0')}catch(e){}draw();toast(PRIV?'Valores ocultos.':'Valores visíveis.')},
   ajuste:function(){
     var c=conta(F.id),e=$('c-real');if(!c||!e||!e.value.trim())return toast('Escreva o saldo que aparece no seu banco.');
@@ -1292,6 +1377,7 @@ $('ov').addEventListener('click',function(e){if(e.target===this)close()});
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!$('ov').hidden)close()});
 function fromHash(){var h=(location.hash||'').slice(1);if(h&&(h==='mais'||TABS.some(function(t){return t[0]===h}))&&h!==tab){tab=h;draw()}}
 window.addEventListener('hashchange',fromHash);
+var rzT=null;window.addEventListener('resize',function(){clearTimeout(rzT);rzT=setTimeout(function(){if(tab==='relatorios'&&$('ov').hidden)draw()},200)});
 (function(){var h=(location.hash||'').slice(1);if(h==='mais'||TABS.some(function(t){return t[0]===h}))tab=h})();
 start();
 if('serviceWorker' in navigator&&location.protocol==='https:')window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})});
