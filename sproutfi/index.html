@@ -164,6 +164,7 @@ a.btn2,a.btn{text-decoration:none;display:inline-block;color:var(--ink)}a.btn{co
 .side .nb{color:var(--heromut)}.side .nb:hover{background:rgba(255,255,255,.06)}.side .nb.on{background:rgba(255,255,255,.1);color:var(--herofg)}.side .nb.on svg{color:var(--fi)}
 .brand{color:var(--herofg)}.brand .lm{width:32px;height:32px;border-radius:9px;overflow:hidden;background:#15253e;flex:none}.brand .lm img{width:100%;height:100%;display:block}
 .wm{font:600 21px/1 var(--fd);letter-spacing:-.01em}.wm em{font-style:normal;color:var(--fi)}
+.hero .big.bpos{color:#3ee08f}.hero .big.bneg{color:#ff8577}
 .hero{background:radial-gradient(120% 160% at 100% 0%,rgba(47,111,224,.38),transparent 55%),radial-gradient(90% 140% at 0% 100%,rgba(34,196,126,.3),transparent 60%),var(--hero)}
 .btn{background:var(--ac)}
 :root:not([data-ac]) .btn,:root[data-ac="sprout"] .btn{background:linear-gradient(120deg,#16a970,#13a9a0 60%,#2a6fe0);color:#fff}
@@ -779,7 +780,7 @@ function vHome(all){
   h+=demoNote();
   if(!m.contas.length)h+='<div class="pn"><h2>Comece por aqui</h2><div>Cadastre a conta onde o seu dinheiro fica (carteira, banco ou poupança). Depois é só lançar receitas e despesas.</div><div><button class="btn" onclick="A.conta()">Criar minha primeira conta</button></div></div>';
   else h+=quickBox();
-  h+='<div class="hero"><div class="bal"><small>'+(cur>nowYm?'Balanço previsto de ':'Balanço de ')+mn+'</small><div class="big">'+(o.b>0&&!PRIV?'+ ':'')+R(o.b)+'</div><small>'+(PRIV?'Receitas menos despesas do mês':o.b>=0?'Sobram '+R(o.b)+' das receitas depois das despesas':'Você gastou '+R(-o.b)+' a mais do que recebeu')+'</small></div><div class="trio"><div><small>Receitas</small><b>'+R(o.r)+'</b></div><div><small>Despesas</small><b>'+R(o.d)+'</b></div></div></div>';
+  h+='<div class="hero"><div class="bal"><small>'+(cur>nowYm?'Balanço previsto de ':'Balanço de ')+mn+'</small><div class="big'+(PRIV||!o.b?'':o.b>0?' bpos':' bneg')+'">'+(o.b>0&&!PRIV?'+ ':'')+R(o.b)+'</div><small>'+(PRIV?'Receitas menos despesas do mês':o.b>=0?'Sobram '+R(o.b)+' das receitas depois das despesas':'Você gastou '+R(-o.b)+' a mais do que recebeu')+'</small></div><div class="trio"><div><small>Receitas</small><b>'+R(o.r)+'</b></div><div><small>Despesas</small><b>'+R(o.d)+'</b></div></div></div>';
   if(m.contas.length)h+=insPanel(all);
   h+='<div class="grid">';
   h+='<div class="pn"><h2>Contas <button class="lk" onclick="A.go(\'contas\')">Ver todas</button></h2>'+(m.contas.length?'<div><small class="mut">'+lbl+'</small><div style="font:700 28px/1.2 var(--fd)" class="'+(saldo<0?'neg':'')+'">'+R(saldo)+'</div><div class="sm mut">'+sub+'</div></div>':'')+(m.contas.length?m.contas.map(function(c){var s=saldoMes(c,all);return '<div class="row">'+dotOf(c)+'<span class="tx"><b>'+esc(c.nome)+'</b><span>'+esc(c.tipo)+'</span></span><span class="vl '+(s<0?'neg':'')+'">'+R(s)+'</span></div>'}).join(''):'<div class="empty">Nenhuma conta cadastrada.</div>')+'</div>';
