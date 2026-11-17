@@ -1,0 +1,39 @@
+BOLSO EM DIA - COMO COLOCAR NO AR
+==================================
+
+O que tem nesta pasta
+- index.html ............ o app inteiro (cadastro, login e todas as telas)
+- config.js ............. endereço e chave PUBLICÁVEL do Supabase
+- supabase.sql .......... cria o banco de dados e as regras de segurança
+- privacidade.html ...... política de privacidade (modelo: preencha os [CAMPOS])
+- termos.html ........... termos de uso (modelo: preencha os [CAMPOS])
+- manifest.webmanifest, sw.js e os ícones ... permitem instalar no celular
+
+PASSO 1 - Banco de dados (Supabase), uma vez só
+1. Entre em supabase.com e abra o seu projeto.
+2. Menu lateral: SQL Editor > New query.
+3. Cole todo o conteúdo de supabase.sql e clique em Run.
+
+PASSO 2 - Endereço do site no Supabase (para confirmação de e-mail e "esqueci a senha")
+1. No Supabase: Authentication > URL Configuration.
+2. Site URL: https://gomeeesss.github.io/gometis-doces/bolso-em-dia/
+3. Redirect URLs: adicione a mesma linha acima e clique em Save.
+
+PASSO 3 - Publicar no GitHub
+1. Abra github.com/gomeeesss/gometis-doces.
+2. Add file > Upload files.
+3. Arraste a PASTA bolso-em-dia inteira (não só os arquivos soltos).
+4. Clique em Commit changes.
+5. Espere 1 ou 2 minutos e abra:
+   https://gomeeesss.github.io/gometis-doces/bolso-em-dia/
+
+PASSO 4 - Antes de divulgar para outras pessoas
+- Preencha os [CAMPOS] em privacidade.html e termos.html (nome, contato, cidade).
+- E-mails do Supabase: o envio padrão é limitado a poucos e-mails por hora e
+  serve só para testes. Para receber cadastros de verdade, configure um SMTP
+  próprio em Authentication > Emails > SMTP Settings (por exemplo Resend ou Brevo,
+  que têm plano gratuito).
+- Plano gratuito do Supabase: o projeto é pausado depois de 7 dias sem nenhum
+  acesso. Com gente usando, isso não acontece.
+- Recomendado: criar um projeto do Supabase só para o Bolso em Dia e trocar a
+  URL e a chave em config.js. Hoje ele usa o mesmo projeto do app da doceria.
