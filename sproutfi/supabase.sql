@@ -1,4 +1,4 @@
--- Bolso em Dia: banco de dados.
+-- SproutFi: banco de dados.
 -- Como usar: Supabase > SQL Editor > New query > cole tudo > Run. Pode rodar mais de uma vez.
 
 -- 1. Dados de cada pessoa: um registro de configurações ("meta") e um registro por mês ("tx-AAAA-MM").

@@ -16,7 +16,7 @@ PASSO 1 - Banco de dados (Supabase), uma vez só
 
 PASSO 2 - Endereço do site no Supabase (para confirmação de e-mail e "esqueci a senha")
 1. No Supabase: Authentication > URL Configuration.
-2. Site URL: https://gomeeesss.github.io/gometis-doces/bolso-em-dia/
+2. Site URL: https://gomeeesss.github.io/gometis-doces/sproutfi/
 3. Redirect URLs: adicione a mesma linha acima e clique em Save.
 
 PASSO 3 - Publicar no GitHub
@@ -25,7 +25,7 @@ PASSO 3 - Publicar no GitHub
 3. Arraste a PASTA bolso-em-dia inteira (não só os arquivos soltos).
 4. Clique em Commit changes.
 5. Espere 1 ou 2 minutos e abra:
-   https://gomeeesss.github.io/gometis-doces/bolso-em-dia/
+   https://gomeeesss.github.io/gometis-doces/sproutfi/
 
 PASSO 4 - Antes de divulgar para outras pessoas
 - Preencha os [CAMPOS] em privacidade.html e termos.html (nome, contato, cidade).
@@ -35,5 +35,5 @@ PASSO 4 - Antes de divulgar para outras pessoas
   que têm plano gratuito).
 - Plano gratuito do Supabase: o projeto é pausado depois de 7 dias sem nenhum
   acesso. Com gente usando, isso não acontece.
-- Recomendado: criar um projeto do Supabase só para o Bolso em Dia e trocar a
+- Recomendado: criar um projeto do Supabase só para o SproutFi e trocar a
   URL e a chave em config.js. Hoje ele usa o mesmo projeto do app da doceria.
