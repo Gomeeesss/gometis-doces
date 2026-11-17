@@ -517,8 +517,94 @@ function vAssin(){
   return h;
 }
 function dDay(n){var d=new Date();d.setDate(d.getDate()+n);return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate())}
+/* ---------- planilhas (Excel, ODS, CSV) ---------- */
+var PL=null,XL=null;
+function loadXLSX(){if(window.XLSX)return Promise.resolve(window.XLSX);if(XL)return XL;XL=new Promise(function(res,rej){var sc=document.createElement('script');sc.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';sc.onload=function(){window.XLSX?res(window.XLSX):rej()};sc.onerror=function(){XL=null;rej()};document.head.appendChild(sc)});return XL}
+function xlDate(v){
+  if(v==null||v==='')return '';
+  if(typeof v==='number'&&v>20000&&v<80000){var d=new Date(Date.UTC(1899,11,30)+Math.round(v)*864e5);return d.getUTCFullYear()+'-'+p2(d.getUTCMonth()+1)+'-'+p2(d.getUTCDate())}
+  if(v instanceof Date&&!isNaN(v))return v.getFullYear()+'-'+p2(v.getMonth()+1)+'-'+p2(v.getDate());
+  var t=String(v).trim(),m=t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);if(m)return m[1]+'-'+p2(+m[2])+'-'+p2(+m[3]);
+  m=t.match(/^(\d{1,2})[\/.\-](\d{1,2})(?:[\/.\-](\d{2,4}))?/);if(m){var y=m[3]?(m[3].length===2?'20'+m[3]:m[3]):today().slice(0,4);if(+m[2]>=1&&+m[2]<=12&&+m[1]>=1&&+m[1]<=31)return y+'-'+p2(+m[2])+'-'+p2(+m[1])}
+  return '';
+}
+function xlNum(v){
+  if(v==null||v==='')return null;if(typeof v==='number')return Math.round(v*100);
+  var t=String(v).trim();if(!/\d/.test(t))return null;var neg=/^\(.*\)$/.test(t)||/-\s*(r\$)?\s*\d/i.test(t)||/\sD$/i.test(t);
+  t=t.replace(/[()]/g,'').replace(/\s[DC]$/i,'').replace(/-/g,'');var s2=t.replace(/[^\d.,]/g,'');
+  if(s2.indexOf(',')<0&&/\.\d{3}($|\.)/.test(s2))s2=s2.replace(/\./g,'');
+  var c=cents(s2);return neg?-c:c;
+}
+var PLF=[['data','Data'],['desc','Descrição'],['valor','Valor'],['ent','Entrada (crédito)'],['sai','Saída (débito)'],['tipo','Tipo'],['cat','Categoria'],['conta','Conta ou cartão'],['dest','Destino'],['sit','Situação']];
+function plGuess(hs){
+  var m={},used={};var find=function(re){for(var i=0;i<hs.length;i++){if(used[i])continue;if(re.test(norm(hs[i]))){used[i]=1;return i}}return -1};
+  m.data=find(/^(data|dt|date|dia)\b|data (da|de) (compra|lancamento|movimento)|vencimento/);
+  m.desc=find(/descri|historico|lancamento|estabelecimento|titulo|title|memo|detalhe|nome|identificacao|description/);
+  m.valor=find(/^valor|^quantia|^montante|^amount|^preco|^total|valor \(r\)|^r$/);
+  m.ent=m.valor<0?find(/^entrada|^credito|^receita|^entradas/):-1;
+  m.sai=m.valor<0?find(/^saida|^debito|^despesa|^saidas/):-1;
+  m.tipo=find(/^tipo|^natureza|^d c$|^operacao|^movimento/);
+  m.cat=find(/categoria|category/);
+  m.conta=find(/conta|cartao|banco|carteira|origem/);
+  m.dest=find(/destino/);
+  m.sit=find(/situacao|status|^pago/);
+  return m;
+}
+function plTipo(v){var n=norm(v);if(!n)return '';if(/transf/.test(n))return 't';if(/pagamento de fatura|pgto fatura/.test(n))return 'f';if(/^(receita|entrada|credito|c|recebimento|deposito)/.test(n))return 'r';if(/^(despesa|saida|debito|d|pagamento|compra)/.test(n))return 'd';return ''}
+function srcByName(v){var n=norm(v),m=M();if(!n)return '';var k=m.cartoes.find(function(x){return norm(x.nome)===n});if(k)return 'k:'+k.id;var c=m.contas.find(function(x){return norm(x.nome)===n});if(c)return 'c:'+c.id;return ''}
+function plParse(){
+  var c=PL.cfg,mp=c.map,rows=PL.rows.slice(PL.hdr+1),m=M(),out=[],sk={sem:0,dup:0,cartao:0,transf:0},all=allTx(),seen={},newCats={};
+  all.forEach(function(t){seen[t.t+'|'+t.v+'|'+t.d+'|'+norm(t.desc)]=1});
+  var g=function(r,f){return mp[f]>=0?r[mp[f]]:''};
+  rows.forEach(function(r){
+    if(!r||!r.some(function(x){return x!==''&&x!=null}))return;
+    var d=xlDate(g(r,'data')),v=null;
+    if(mp.valor>=0)v=xlNum(g(r,'valor'));else{var e=xlNum(g(r,'ent')),s2=xlNum(g(r,'sai'));if(e)v=Math.abs(e);else if(s2)v=-Math.abs(s2)}
+    if(!d||v===null||v===0){sk.sem++;return}
+    var desc=String(g(r,'desc')||'').trim().slice(0,80),t=plTipo(g(r,'tipo'));
+    if(!t||c.modo!=='coluna'){if(c.modo==='todasdesp')t=v>0?'d':'r';else if(c.modo==='todasrec')t='r';else if(!t)t=v<0?'d':'r'}
+    v=Math.abs(v);
+    var src=srcByName(g(r,'conta'))||c.src,dest=srcByName(g(r,'dest')),isK=src.charAt(0)==='k';
+    var it={d:d,v:v,desc:desc,t:t,src:src};
+    if(t==='t'){if(isK||!dest||dest.charAt(0)!=='c'||dest===src){sk.transf++;return}it.dest=dest.slice(2)}
+    else if(t==='f'){var kk=dest&&dest.charAt(0)==='k'?dest:isK?src:'';if(!kk){sk.transf++;return}it.kid=kk.slice(2);it.src=isK?(c.src.charAt(0)==='c'?c.src:'c:'+m.contas[0].id):src}
+    else{
+      if(isK&&t==='r'){sk.cartao++;return}
+      var cn=String(g(r,'cat')||'').trim(),ce=cn&&m.cats.find(function(x){return x.tipo===t&&norm(x.nome)===norm(cn)});
+      if(ce)it.cat=ce.id;else if(cn&&c.criar){it.newCat=cn;newCats[t+'|'+norm(cn)]=[t,cn]}else{var gs=guess(desc,t);it.cat=gs?gs.cat:catDef(t)}
+      var sit=norm(g(r,'sit'));it.pago=isK?true:sit?!/pend|abert|a pagar|a receber|nao/.test(sit):d<=today();
+    }
+    var key=t+'|'+v+'|'+d+'|'+norm(desc);if(c.dup&&seen[key]){sk.dup++;return}seen[key]=1;
+    out.push(it);
+  });
+  return{items:out,sk:sk,newCats:newCats};
+}
+function plView(){
+  var c=PL.cfg,hs=PL.headers,r=plParse(),it=r.items,nd=0,nr=0;it.forEach(function(x){if(x.t==='d')nd+=x.v;else if(x.t==='r')nr+=x.v});
+  var sel=function(f,lab){return '<label>'+lab+'<select onchange="A.plSet(\'map\',\''+f+'\',this.value)"><option value="-1">Não usar</option>'+hs.map(function(h,i){return '<option value="'+i+'"'+(c.map[f]===i?' selected':'')+'>'+esc(h||('Coluna '+(i+1)))+'</option>'}).join('')+'</select></label>'};
+  var h='<div class="mut sm">'+esc(PL.nome)+(PL.sheets.length>1?' · aba <select onchange="A.plAba(this.value)" style="width:auto;padding:4px 8px">'+PL.sheets.map(function(n){return '<option'+(n===PL.aba?' selected':'')+'>'+esc(n)+'</option>'}).join('')+'</select>':'')+' · '+(PL.rows.length-PL.hdr-1)+' linhas</div>';
+  h+='<details'+(PL.abrirCols?' open':'')+'><summary>Colunas da planilha (reconhecidas sozinhas)</summary><div class="fr">'+PLF.map(function(f){return sel(f[0],f[1])}).join('')+'</div></details>';
+  h+='<div class="fr"><label>Como ler os valores<select onchange="A.plSet(\'modo\',null,this.value)">'+[['sinal','Negativo é despesa, positivo é receita (extrato)'],['todasdesp','Positivo é despesa (fatura de cartão)'],['coluna','Usar a coluna Tipo'],['todasrec','Tudo é receita']].map(function(o){return '<option value="'+o[0]+'"'+(c.modo===o[0]?' selected':'')+'>'+o[1]+'</option>'}).join('')+'</select></label><label>Lançar em<select onchange="A.plSet(\'src\',null,this.value)">'+srcOpts(c.src)+'</select></label></div>';
+  h+='<label class="ck"><input type="checkbox"'+(c.criar?' checked':'')+' onchange="A.plSet(\'criar\',null,this.checked)">Criar as categorias da planilha que ainda não existem</label><label class="ck"><input type="checkbox"'+(c.dup?' checked':'')+' onchange="A.plSet(\'dup\',null,this.checked)">Pular lançamentos que já estão no app</label>';
+  var sk=r.sk,av=[];if(sk.dup)av.push(sk.dup+' já estavam no app');if(sk.sem)av.push(sk.sem+' sem data ou valor');if(sk.cartao)av.push(sk.cartao+' créditos no cartão (estornos e pagamentos)');if(sk.transf)av.push(sk.transf+' transferências sem conta de destino reconhecida');
+  h+='<div class="note">'+(it.length?'<b>'+it.length+' lançamento'+(it.length>1?'s':'')+'</b> para importar: '+R(nd)+' em despesas e '+R(nr)+' em receitas.':'Nenhum lançamento reconhecido. Confira as colunas Data e Valor.')+(av.length?'<br>Ficam de fora: '+av.join(', ')+'.':'')+(Object.keys(r.newCats).length?'<br>Categorias novas: '+Object.keys(r.newCats).map(function(k){return esc(r.newCats[k][1])}).join(', ')+'.':'')+'</div>';
+  if(it.length)h+='<div class="tw"><table><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th class="n">Valor</th></tr>'+it.slice(0,8).map(function(x){return '<tr><td>'+dBr(x.d)+'/'+x.d.slice(2,4)+'</td><td>'+esc(x.desc||'—')+'</td><td>'+esc(x.t==='t'?'Transferência':x.t==='f'?'Pagamento de fatura':x.newCat||cat(x.cat).nome)+'</td><td class="n '+(x.t==='r'?'pos':x.t==='d'?'neg':'')+'">'+R(x.v)+'</td></tr>'}).join('')+'</table></div>'+(it.length>8?'<div class="sm mut">e mais '+(it.length-8)+'…</div>':'');
+  h+='<div class="acts"><button class="btn2" onclick="A.close()">Cancelar</button><button class="btn" onclick="A.plGo()"'+(it.length?'':' disabled')+'>Importar '+(it.length||'')+'</button></div>';
+  $('pl-v').innerHTML=h;
+}
+function defSrc(card){var m=M(),ls=lastSrc&&(conta(lastSrc.slice(2))||cartao(lastSrc.slice(2)))?lastSrc:'';if(card&&m.cartoes.length)return ls.charAt(0)==='k'?ls:'k:'+m.cartoes[0].id;return ls.charAt(0)==='c'?ls:'c:'+m.contas[0].id}
+function plLoad(aba){
+  var ws=PL.wb.Sheets[aba],rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:'',blankrows:false});PL.aba=aba;
+  var hdr=0,best=-1;for(var i=0;i<Math.min(rows.length,20);i++){var g=plGuess((rows[i]||[]).map(String)),sc=(g.data>=0)+(g.valor>=0||g.ent>=0||g.sai>=0)+(g.desc>=0);if(sc>best){best=sc;hdr=i}if(sc===3)break}
+  PL.rows=rows;PL.hdr=hdr;PL.headers=(rows[hdr]||[]).map(function(x){return String(x==null?'':x).trim()});
+  var mp=plGuess(PL.headers),m=M(),neg=0,pos=0;
+  rows.slice(hdr+1,hdr+300).forEach(function(r){var v=mp.valor>=0?xlNum(r[mp.valor]):null;if(v<0)neg++;else if(v>0)pos++});
+  var modo=mp.tipo>=0?'coluna':mp.ent>=0||mp.sai>=0?'sinal':pos>neg*2?'todasdesp':'sinal';
+  PL.cfg={map:mp,modo:modo,src:defSrc(modo==='todasdesp'),criar:true,dup:true};
+  PL.abrirCols=mp.data<0||(mp.valor<0&&mp.ent<0&&mp.sai<0);
+}
 function quickBox(){
-  return '<div class="pn"><div class="fr" style="align-items:center"><input id="qk" style="flex:1 1 220px" placeholder="Lançamento rápido: mercado 54,90" onkeydown="if(event.key===\'Enter\')A.quick()" aria-label="Lançamento rápido" autocomplete="off"><button class="btn" onclick="A.quick()">Lançar</button>'+(SAMPLE?'<button class="btn2" onclick="A.imp()">Importar extrato</button>':'')+'</div><div class="sm mut">Escreva a descrição e o valor e aperte Enter. A categoria é escolhida sozinha. Exemplos: <b>uber 23,50</b> · <b>salário 3000</b> · <b>padaria 12 ontem</b> · <b>tênis 400 4x visa</b> · <b>barbearia 60 todo mês</b> · <b>água 90 dia 10 todo mês</b> · <b>salário 3000 dia 5 todo mês</b>. Também dá para colar o código de um boleto ou Pix.</div></div>';
+  return '<div class="pn"><div class="fr" style="align-items:center"><input id="qk" style="flex:1 1 220px" placeholder="Lançamento rápido: mercado 54,90" onkeydown="if(event.key===\'Enter\')A.quick()" aria-label="Lançamento rápido" autocomplete="off"><button class="btn" onclick="A.quick()">Lançar</button>'+(SAMPLE?'<button class="btn2" onclick="A.imp()">Importar extrato</button>':'')+'<button class="btn2" onclick="A.planilha()">Importar planilha</button></div><div class="sm mut">Escreva a descrição e o valor e aperte Enter. A categoria é escolhida sozinha. Exemplos: <b>uber 23,50</b> · <b>salário 3000</b> · <b>padaria 12 ontem</b> · <b>tênis 400 4x visa</b> · <b>barbearia 60 todo mês</b> · <b>água 90 dia 10 todo mês</b> · <b>salário 3000 dia 5 todo mês</b>. Também dá para colar o código de um boleto ou Pix.</div></div>';
 }
 
 /* ---------- gravação (nuvem ou aparelho) ---------- */
@@ -748,7 +834,7 @@ function vRel(all){
   var o=L[5].o,ps=catParts(o);
   var h='<div class="pn"><h2>Receitas e despesas, últimos 6 meses</h2><div class="lg" style="flex-direction:row;gap:16px;flex:none"><div><i style="background:var(--pos)"></i>Receitas</div><div><i style="background:var(--neg)"></i>Despesas</div></div><div class="tw">'+s+'</div><div class="tw"><table><tr><th>Mês</th><th class="n">Receitas</th><th class="n">Despesas</th><th class="n">Balanço</th></tr>'+L.map(function(x){return '<tr><td style="text-transform:capitalize">'+ymName(x.ym)+'</td><td class="n pos">'+R(x.o.r)+'</td><td class="n neg">'+R(x.o.d)+'</td><td class="n '+(x.o.b<0?'neg':'')+'"><b>'+R(x.o.b)+'</b></td></tr>'}).join('')+'</table></div></div>';
   h+='<div class="pn"><h2>Despesas por categoria em '+ymName(cur)+'</h2>'+donut(ps,o.d)+(ps.length?'<div class="tw"><table><tr><th>Categoria</th><th class="n">Valor</th><th class="n">Parte do total</th></tr>'+ps.map(function(p){return '<tr><td>'+esc(p.nome)+'</td><td class="n">'+R(p.v)+'</td><td class="n">'+(p.v/o.d*100).toFixed(1).replace('.',',')+'%</td></tr>'}).join('')+'</table></div>':'')+'</div>';
-  h+='<div class="pn"><h2>Exportar</h2><div class="mut">Baixe todas as transações em uma planilha (CSV) para abrir no Excel ou guardar como cópia.</div><div class="fr"><button class="btn2" onclick="A.csv()">Baixar planilha</button></div></div>';
+  h+='<div class="pn"><h2>Planilhas</h2><div class="mut">Traga lançamentos de uma planilha do Excel, do Google Planilhas ou do extrato do banco, ou baixe tudo o que está no app.</div><div class="fr"><button class="btn" onclick="A.planilha()">Importar planilha</button><button class="btn2" onclick="A.xlsx()">Baixar em Excel</button><button class="btn2" onclick="A.csv()">Baixar em CSV</button><button class="lk" onclick="A.modelo()">Baixar planilha modelo</button></div></div>';
   h+='<div class="pn"><h2>Backup completo</h2><div class="mut">Guarde uma cópia de tudo (contas, cartões, transações, contas fixas, metas e categorias) em um arquivo. Com ele você recupera os dados se algo der errado.</div><div class="fr" style="align-items:center"><button class="btn2" onclick="A.backup()">Baixar backup</button><label class="btn2" style="flex:none;flex-direction:row;color:var(--ink);font-size:15px;cursor:pointer">Restaurar backup<input type="file" id="bk-f" accept=".json,application/json" onchange="A.restore(this)" hidden></label></div></div>';
   return '<div style="display:flex;flex-direction:column;gap:16px">'+h+'</div>';
 }
@@ -1116,6 +1202,61 @@ var A=window.A={
   },
   catSave:function(){var n=$('t-n').value.trim();if(!n)return toast('Dê um nome à categoria.');var m=M(),c=F.id&&m.cats.find(function(x){return x.id===F.id});if(c){c.nome=n;c.cor=corSel()}else m.cats.push({id:'c-'+uid(),nome:n,tipo:F.tipo,cor:corSel()});close();mark('meta')},
   catDel:function(btn){if(!two('cat',btn,'Toque de novo: as transações ficam sem categoria'))return;var m=M(),id=F.id;m.cats=m.cats.filter(function(c){return c.id!==id});delete m.orc[id];close();mark('meta')},
+  planilha:function(){
+    if(!need())return;if(!M().contas.length){toast('Cadastre uma conta antes de importar.');return A.conta()}
+    F={k:'pl'};F_edit=true;PL=null;
+    modal('<h2>Importar planilha</h2><div class="mut">Escolha um arquivo do Excel (.xlsx ou .xls), do Google Planilhas, do LibreOffice (.ods) ou um CSV, como o extrato ou a fatura que o banco deixa baixar. O app reconhece as colunas e mostra tudo antes de importar.</div><label class="btn" style="flex:none;align-self:flex-start;flex-direction:row;color:#fff;font-size:15px;cursor:pointer">Escolher arquivo<input type="file" id="pl-f" accept=".xlsx,.xls,.xlsm,.ods,.csv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" onchange="A.plFile(this)" hidden></label><div class="sm mut">Não sabe como montar? <button class="lk" onclick="A.modelo()">Baixe a planilha modelo</button>, preencha e importe.</div><div id="pl-v"></div>');
+  },
+  plFile:async function(inp0){
+    var f=inp0.files&&inp0.files[0];if(!f)return;var v=$('pl-v');v.innerHTML='<div class="note">Lendo a planilha…</div>';
+    try{
+      var X=await loadXLSX(),buf=await f.arrayBuffer(),wb;
+      if(/\.(csv|txt)$/i.test(f.name)){
+        var txt=new TextDecoder('utf-8').decode(buf);if(txt.indexOf('�')>-1)txt=new TextDecoder('windows-1252').decode(buf);txt=txt.replace(/^﻿/,'');
+        var l1=txt.split(/\r?\n/)[0]||'',fs=[';','\t',','].sort(function(a,b){return l1.split(b).length-l1.split(a).length})[0];
+        wb=X.read(txt,{type:'string',FS:fs,raw:true});
+      }else wb=X.read(buf,{type:'array'});
+      var sh=wb.SheetNames.filter(function(n){var r=X.utils.sheet_to_json(wb.Sheets[n],{header:1,blankrows:false});return r.length>1});
+      if(!sh.length){v.innerHTML='<div class="note e">A planilha está vazia.</div>';return}
+      PL={wb:wb,nome:f.name,sheets:sh};plLoad(sh[0]);plView();
+    }catch(e){v.innerHTML='<div class="note e">'+(XL===null&&!window.XLSX?'Não foi possível carregar o leitor de planilhas. Verifique a internet e tente de novo.':'Não consegui ler este arquivo. Salve como .xlsx ou .csv e tente de novo.')+'</div>'}
+  },
+  plAba:function(n){plLoad(n);plView()},
+  plSet:function(k,f,v){if(!PL)return;if(k==='map')PL.cfg.map[f]=parseInt(v,10);else PL.cfg[k]=v;if(k==='src'&&v.charAt(0)==='k'&&PL.cfg.modo==='sinal'&&PL.cfg.map.tipo<0)PL.cfg.modo='todasdesp';if(k==='src'&&v.charAt(0)==='c'&&PL.cfg.modo==='todasdesp')PL.cfg.modo='sinal';if(k==='map')PL.abrirCols=true;plView()},
+  plGo:function(){
+    var r=plParse(),it=r.items,m=M();if(!it.length)return;
+    var made={};Object.keys(r.newCats).forEach(function(k){var x=r.newCats[k],c={id:'c-'+uid(),nome:x[1].slice(0,40),tipo:x[0],cor:PAL[m.cats.length%PAL.length]};m.cats.push(c);made[k]=c.id});
+    hold++;var last='';
+    it.forEach(function(x){
+      var t;if(x.t==='t')t={id:uid(),t:'t',v:x.v,d:x.d,desc:x.desc,cat:'',conta:x.src.slice(2),cartao:'',dest:x.dest,pago:true};
+      else if(x.t==='f')t={id:uid(),t:'f',v:x.v,d:x.d,desc:'',cat:'',conta:x.src.slice(2),cartao:x.kid,dest:'',pago:true,fym:x.d.slice(0,7)};
+      else{var isK=x.src.charAt(0)==='k';t={id:uid(),t:x.t,v:x.v,d:x.d,desc:x.desc,cat:x.newCat?made[x.t+'|'+norm(x.newCat)]:x.cat,conta:isK?'':x.src.slice(2),cartao:isK?x.src.slice(2):'',dest:'',pago:x.pago}}
+      txPut(t);if(x.d>last)last=x.d;
+    });
+    if(Object.keys(made).length)mark('meta');setSrc(PL.cfg.src);PL=null;hold--;close();
+    if(last&&last.slice(0,7)<=today().slice(0,7))cur=last.slice(0,7);go('transacoes');
+    toast(it.length+' lançamento'+(it.length>1?'s importados':' importado')+'.');
+  },
+  xlsx:async function(){
+    var all=allTx().sort(function(a,b){return a.d.localeCompare(b.d)});if(!all.length)return toast('Ainda não há transações para exportar.');
+    try{var X=await loadXLSX()}catch(e){return toast('Não foi possível preparar o arquivo do Excel. Verifique a internet.')}
+    var tn={d:'Despesa',r:'Receita',t:'Transferência',f:'Pagamento de fatura'};
+    var rows=[['Data','Tipo','Descrição','Categoria','Conta ou cartão','Destino','Valor','Situação']].concat(all.map(function(t){return [t.d.slice(8,10)+'/'+t.d.slice(5,7)+'/'+t.d.slice(0,4),tn[t.t],t.desc||'',t.t==='d'||t.t==='r'?cat(t.cat).nome:'',t.t==='d'&&t.cartao?(cartao(t.cartao)||{}).nome||'':(conta(t.conta)||{}).nome||'',t.t==='t'?(conta(t.dest)||{}).nome||'':t.t==='f'?(cartao(t.cartao)||{}).nome||'':'',(t.t==='r'?1:-1)*t.v/100,t.cartao&&t.t==='d'?'Na fatura':t.pago?'Pago':'Pendente']}));
+    var ws=X.utils.aoa_to_sheet(rows);ws['!cols']=[{wch:11},{wch:18},{wch:32},{wch:18},{wch:18},{wch:16},{wch:12},{wch:11}];
+    for(var i=1;i<rows.length;i++){var ref=X.utils.encode_cell({r:i,c:6});if(ws[ref])ws[ref].z='#,##0.00'}
+    var wb=X.utils.book_new();X.utils.book_append_sheet(wb,ws,'Transações');
+    var out=X.write(wb,{bookType:'xlsx',type:'array'});
+    try{await saveFile({filename:'sproutfi-'+today()+'.xlsx',data:new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})});toast('Planilha do Excel salva.')}catch(e){if(!e||e.code!=='declined')toast('Não foi possível baixar a planilha agora.')}
+  },
+  modelo:async function(){
+    try{var X=await loadXLSX()}catch(e){return toast('Não foi possível preparar o arquivo do Excel. Verifique a internet.')}
+    var m=M(),cn=(m.contas[0]||{nome:'Nubank'}).nome,d=today(),br=function(x){return x.slice(8,10)+'/'+x.slice(5,7)+'/'+x.slice(0,4)};
+    var rows=[['Data','Descrição','Valor','Categoria','Conta ou cartão','Situação'],[br(d),'Mercado',-154.9,'Alimentação',cn,'Pago'],[br(d),'Salário',3500,'Salário',cn,'Pago'],[br(dDay(5)),'Conta de luz',-180,'Moradia',cn,'Pendente'],[br(dDay(-2)),'Uber',-23.5,'Transporte',cn,'Pago']];
+    var ws=X.utils.aoa_to_sheet(rows);ws['!cols']=[{wch:11},{wch:28},{wch:12},{wch:18},{wch:18},{wch:11}];
+    var ins=X.utils.aoa_to_sheet([['Como preencher'],['Data: dia/mês/ano.'],['Valor: negativo para despesa (ex.: -50,00) e positivo para receita.'],['Categoria: use os nomes das suas categorias. Nomes novos viram categorias novas.'],['Conta ou cartão: o nome igual ao cadastrado no SproutFi. Em branco, você escolhe na importação.'],['Situação: Pago ou Pendente. Em branco, datas passadas contam como pagas.']]);ins['!cols']=[{wch:90}];
+    var wb=X.utils.book_new();X.utils.book_append_sheet(wb,ws,'Lançamentos');X.utils.book_append_sheet(wb,ins,'Como preencher');
+    try{await saveFile({filename:'modelo-sproutfi.xlsx',data:new Blob([X.write(wb,{bookType:'xlsx',type:'array'})],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})});toast('Planilha modelo salva.')}catch(e){}
+  },
   csv:async function(){
     var all=allTx().sort(function(a,b){return a.d.localeCompare(b.d)});if(!all.length)return toast('Ainda não há transações para exportar.');
     
