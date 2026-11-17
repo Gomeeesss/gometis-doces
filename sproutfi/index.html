@@ -169,14 +169,13 @@ a.btn2,a.btn{text-decoration:none;display:inline-block;color:var(--ink)}a.btn{co
 :root:not([data-ac]) .btn,:root[data-ac="sprout"] .btn{background:linear-gradient(120deg,#16a970,#13a9a0 60%,#2a6fe0);color:#fff}
 .cc{position:relative;border-radius:16px;padding:16px;min-height:168px;display:flex;flex-direction:column;gap:2px;overflow:hidden;box-shadow:0 6px 18px rgba(10,20,40,.18)}
 .cc::after{content:"";position:absolute;right:-60px;top:-60px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,.08);pointer-events:none}
-.cc .ct{display:flex;align-items:center;gap:10px;margin-bottom:8px}.cc .ct .sp{flex:1}
+.cc .ct{display:flex;align-items:center;gap:10px;margin-bottom:8px;min-height:38px}.cc .ct .sp{flex:1}
 .cc .ct small{font-weight:600;letter-spacing:.04em;text-transform:uppercase;font-size:11px;opacity:.85}
-.bl{width:40px;height:40px;border-radius:50%;flex:none;overflow:hidden;display:grid;place-items:center;background:rgba(255,255,255,.16);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.4)}
-.bl img{width:100%;height:100%;object-fit:cover;display:block;border-radius:50%}
-.bm{font:700 14px/1 var(--fd);color:currentColor;letter-spacing:.02em}
+.blm{width:38px;height:38px;flex:none;-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center}
+.bm{font:700 19px/1 var(--fd);letter-spacing:-.02em;flex:none}
 .cc .ct .bn{font:600 17px/1.1 var(--fd);letter-spacing:-.01em}
 .chip3{width:34px;height:25px;border-radius:6px;background:linear-gradient(135deg,#f3d27a,#c9a24a);opacity:.9;margin:4px 0 6px}
-.dot.bk{background:var(--sf2);padding:0;overflow:hidden}.dot.bk .bl{width:100%;height:100%;box-shadow:inset 0 0 0 1px var(--ln)}.dot.bk .bm{color:var(--ink);font-size:12px}
+.dot .blm{width:62%;height:62%}.dot .bm{font-size:12px}
 .acc{display:flex;gap:10px;flex-wrap:wrap}.acc button{width:38px;height:38px;border-radius:50%;border:3px solid var(--sf);outline:1px solid var(--ln)}.acc button.on{outline:2px solid var(--ink)}
 </style>
 </head>
@@ -440,11 +439,12 @@ function bancoDe(x){
 function colorOf(x){var b=bancoDe(x);return b?b.c1:(x&&x.cor)||'#7a8699'}
 function shade(h,f){var n=parseInt(String(h).slice(1),16);if(isNaN(n))return h;var r=n>>16,g=n>>8&255,b=n&255;f=f||.68;return 'rgb('+Math.round(r*f)+','+Math.round(g*f)+','+Math.round(b*f)+')'}
 function mono(b){var w=b.nome.replace(/^Banco /,'').split(' ').filter(function(x){return x&&x!=='Bank'&&x!=='do'});return (w.length>1?w[0].charAt(0)+w[1].charAt(0):w[0].slice(0,2)).toUpperCase()}
-function blogo(b){return '<span class="bl"><img src="https://www.google.com/s2/favicons?domain='+b.dom+'&sz=128" alt="" loading="lazy" data-m="'+esc(mono(b))+'" onload="A.blChk(this)" onerror="A.blErr(this)"></span>'}
-function dotOf(x){var b=bancoDe(x);return b?'<span class="dot bk">'+blogo(b)+'</span>':'<span class="dot" style="background:'+esc(x.cor)+'">'+esc(x.nome.charAt(0).toUpperCase())+'</span>'}
+var HASLOGO={nubank:1,inter:1,bb:1,caixa:1,santander:1,c6:1,picpay:1,mercadopago:1,pagbank:1,btg:1,xp:1,neon:1,sicoob:1,safra:1,porto:1,nomad:1,wise:1,agibank:1,bmg:1,pan:1};
+function blogo(b,color){if(HASLOGO[b.k]){var u='url(bancos/'+b.k+'.png)';return '<span class="blm" role="img" aria-label="'+esc(b.nome)+'" style="-webkit-mask-image:'+u+';mask-image:'+u+';background:'+color+'"></span>'}return '<span class="bm" style="color:'+color+'" aria-hidden="true">'+esc(mono(b))+'</span>'}
+function dotOf(x){var b=bancoDe(x);return b?'<span class="dot" style="background:'+b.c1+'">'+blogo(b,b.fg)+'</span>':'<span class="dot" style="background:'+esc(x.cor)+'">'+esc(x.nome.charAt(0).toUpperCase())+'</span>'}
 function cardFace(x,label,amount,sub,top){
   var b=bancoDe(x),bg=b?'linear-gradient(135deg,'+b.c1+','+b.c2+')':'linear-gradient(135deg,'+x.cor+','+shade(x.cor)+')',fg=b?b.fg:'#fff';
-  return '<div class="cc" style="background:'+bg+';color:'+fg+'"><div class="ct">'+(b?blogo(b):'')+'<span class="bn">'+esc(b?b.nome:x.nome)+'</span><span class="sp"></span><small>'+esc(label)+'</small></div>'+(top?'<div class="chip3" aria-hidden="true"></div>':'')+'<small style="opacity:.85">'+esc(b&&norm(b.nome)!==norm(x.nome)?x.nome:sub||'')+'</small><b>'+amount+'</b>'+(b&&norm(b.nome)!==norm(x.nome)&&sub?'<small style="opacity:.85">'+esc(sub)+'</small>':'')+'</div>';
+  return '<div class="cc" style="background:'+bg+';color:'+fg+'"><div class="ct">'+(b?blogo(b,fg):'')+'<span class="bn">'+esc(b?b.nome:x.nome)+'</span><span class="sp"></span><small>'+esc(label)+'</small></div>'+(top?'<div class="chip3" aria-hidden="true"></div>':'')+'<small style="opacity:.85">'+esc(b&&norm(b.nome)!==norm(x.nome)?x.nome:sub||'')+'</small><b>'+amount+'</b>'+(b&&norm(b.nome)!==norm(x.nome)&&sub?'<small style="opacity:.85">'+esc(sub)+'</small>':'')+'</div>';
 }
 function bankSel(id,x){var cur=x?(bancoDe(x)||{}).k||'':'';return '<label>Banco<select id="'+id+'" onchange="A.bancoSel(this)"><option value="">Outro ou sem banco</option>'+BANKS.slice().sort(function(a,b){return a.nome.localeCompare(b.nome)}).map(function(b){return '<option value="'+b.k+'"'+(b.k===cur?' selected':'')+'>'+esc(b.nome)+'</option>'}).join('')+'</select></label>'}
 function dueDate(k,ym){return subDate({dia:k.vence},k.vence>k.fecha?ym:ymAdd(ym,1))}
