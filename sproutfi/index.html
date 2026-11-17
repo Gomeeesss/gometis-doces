@@ -398,6 +398,7 @@ function vConta(){
   var tm=temaAtual(),cores=[['sprout','SproutFi','linear-gradient(135deg,#16a970,#13a9a0 60%,#2a6fe0)'],['oceano','Oceano','#2563d9'],['ametista','Ametista','#7444d6'],['coral','Coral','#d9542b'],['rosa','Rosa','#cc3b78'],['grafite','Grafite','#3b4046']];
   h+='<div class="pn"><h2>Aparência</h2><div class="sm mut" style="font-weight:600">Tema</div><div class="seg">'+[['auto','Automático'],['claro','Claro'],['escuro','Escuro']].map(function(x){return '<button class="'+(tm.modo===x[0]?'on':'')+'" onclick="A.tema(\'modo\',\''+x[0]+'\')">'+x[1]+'</button>'}).join('')+'</div><div class="sm mut" style="font-weight:600">Cor de destaque</div><div class="acc">'+cores.map(function(c){return '<button class="'+(tm.cor===c[0]?'on':'')+'" style="background:'+c[2]+'" onclick="A.tema(\'cor\',\''+c[0]+'\')" aria-label="'+c[1]+'" title="'+c[1]+'"></button>'}).join('')+'</div><div class="sm mut">Vale para todos os seus aparelhos.</div></div>';
   h+='<div class="pn"><h2>Instalar no celular</h2>'+(instEv?'<div><button class="btn" onclick="A.instalar()">Instalar o SproutFi</button></div>':'<div class="mut">No Android (Chrome), abra o menu ⋮ e toque em Instalar app. No iPhone (Safari), toque em Compartilhar e depois em Adicionar à Tela de Início.</div>')+'</div>';
+  if(temDemo())h+='<div class="pn"><h2>Demonstração</h2>'+demoNote()+'</div>';
   h+='<div class="pn"><h2>Seus dados</h2><div class="mut">Baixe uma cópia de tudo quando quiser em Relatórios › Backup completo.</div><div class="alt sm" style="display:flex;gap:16px;flex-wrap:wrap"><a class="lk" href="privacidade.html" target="_blank" rel="noopener">Política de privacidade</a><a class="lk" href="termos.html" target="_blank" rel="noopener">Termos de uso</a></div>'
   +(mode==='cloud'&&USER?'<div><button class="del" onclick="A.excluirConta(this)">Excluir minha conta e todos os dados</button></div>':'')+'</div>';
   return '<div style="display:flex;flex-direction:column;gap:16px">'+h+'</div>';
@@ -607,6 +608,8 @@ function plLoad(aba){
   PL.cfg={map:mp,modo:modo,src:defSrc(modo==='todasdesp'),criar:true,dup:true};
   PL.abrirCols=mp.data<0||(mp.valor<0&&mp.ent<0&&mp.sai<0);
 }
+function temDemo(){var m=M();return ['contas','cartoes','assin','metas','cats'].some(function(k){return (m[k]||[]).some(function(x){return x.demo})})||allTx().some(function(t){return t.demo})}
+function demoNote(){return temDemo()?'<div class="note">Você está vendo <b>dados de demonstração</b>, criados para mostrar tudo o que o SproutFi faz. Eles ficam separados dos seus. <button class="lk" onclick="A.limparDemo(this)">Apagar a demonstração</button></div>':''}
 function quickBox(){
   return '<div class="pn"><div class="fr" style="align-items:center"><input id="qk" style="flex:1 1 220px" placeholder="Lançamento rápido: mercado 54,90" onkeydown="if(event.key===\'Enter\')A.quick()" aria-label="Lançamento rápido" autocomplete="off"><button class="btn" onclick="A.quick()">Lançar</button>'+(SAMPLE?'<button class="btn2" onclick="A.imp()">Importar extrato</button>':'')+'<button class="btn2" onclick="A.planilha()">Importar planilha</button></div><div class="sm mut">Escreva a descrição e o valor e aperte Enter. A categoria é escolhida sozinha. Exemplos: <b>uber 23,50</b> · <b>salário 3000</b> · <b>padaria 12 ontem</b> · <b>tênis 400 4x visa</b> · <b>barbearia 60 todo mês</b> · <b>água 90 dia 10 todo mês</b> · <b>salário 3000 dia 5 todo mês</b>. Também dá para colar o código de um boleto ou Pix.</div></div>';
 }
@@ -773,6 +776,7 @@ function vHome(all){
   if(cur<nowYm){saldo=m.contas.reduce(function(a,c){return a+saldoConta(c,all,fimMes(cur))},0);lbl='Saldo no fim de '+mn+' de '+cur.slice(0,4);sub='Quanto havia nas contas no último dia do mês'}
   else if(cur===nowYm){lbl='Saldo em contas hoje';sub='Previsto para o fim de '+mn+': '+R(projecao(all,fimMes(cur)).end.v)}
   else{saldo=projecao(all,fimMes(cur)).end.v;lbl='Saldo previsto no fim de '+mn+' de '+cur.slice(0,4);sub='Com as contas, faturas e receitas previstas até lá'}
+  h+=demoNote();
   if(!m.contas.length)h+='<div class="pn"><h2>Comece por aqui</h2><div>Cadastre a conta onde o seu dinheiro fica (carteira, banco ou poupança). Depois é só lançar receitas e despesas.</div><div><button class="btn" onclick="A.conta()">Criar minha primeira conta</button></div></div>';
   else h+=quickBox();
   h+='<div class="hero"><div class="bal"><small>'+lbl+'</small><div class="big">'+R(saldo)+'</div><small>'+sub+'</small></div><div class="trio"><div><small>Receitas</small><b>'+R(o.r)+'</b></div><div><small>Despesas</small><b>'+R(o.d)+'</b></div><div><small>Balanço do mês</small><b>'+R(o.b)+'</b></div></div></div>';
@@ -1077,6 +1081,16 @@ var A=window.A={
   blErr:function(img){var s2=document.createElement('span');s2.className='bm';s2.textContent=img.getAttribute('data-m')||'';img.replaceWith(s2)},
   bancoSel:function(sel){var b=BANK[sel.value],n=$('c-n')||$('k-n'),w=$('sw-w');if(w)w.hidden=!!b;if(b&&n&&!n.value.trim())n.value=b.nome},
   tema:function(k,v){var t=temaAtual();t[k]=v;try{localStorage.setItem('sf-tema',JSON.stringify(t))}catch(e){}if(loaded&&S.meta){M().prefs=t;mark('meta')}else{applyTema();draw()}},
+  limparDemo:function(btn){
+    if(!two('demo',btn,'Toque de novo para apagar só a demonstração'))return;
+    var m=M(),n=0;hold++;
+    allTx().forEach(function(t){if(t.demo){txDel(t);n++}});
+    ['contas','cartoes','assin','metas'].forEach(function(k){m[k]=(m[k]||[]).filter(function(x){return !x.demo})});
+    (m.orcDemo||[]).forEach(function(id){delete m.orc[id]});delete m.orcDemo;
+    var usadas={};allTx().forEach(function(t){usadas[t.cat]=1});m.assin.forEach(function(a){usadas[a.cat]=1});
+    m.cats=m.cats.filter(function(c){return !c.demo||usadas[c.id]});
+    mark('meta');hold--;draw();toast('Demonstração apagada: '+n+' lançamentos removidos. Seus dados continuam aqui.');
+  },
   priv:function(){PRIV=!PRIV;try{localStorage.setItem('bolso-priv',PRIV?'1':'0')}catch(e){}draw();toast(PRIV?'Valores ocultos.':'Valores visíveis.')},
   ajuste:function(){
     var c=conta(F.id),e=$('c-real');if(!c||!e||!e.value.trim())return toast('Escreva o saldo que aparece no seu banco.');
