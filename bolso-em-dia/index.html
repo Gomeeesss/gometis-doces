@@ -562,7 +562,7 @@ function drawStatus(){
   else if(sync==='offline'||sync==='error')h='<div class="note e">Sem conexão: há alterações que ainda não foram salvas na nuvem. <button class="lk" onclick="A.retry()">Tentar de novo</button></div>';
   else if(slow&&loaded)h='<div class="note">Sem resposta da nuvem. Os dados na tela podem estar desatualizados.</div>';
   $('status').innerHTML=h;
-  var s=$('sy');if(s){var w=sync==='saving',e=sync!=='ok'&&!w;s.className='sync'+(mode==='local'||w?' w':e?' e':'');s.lastChild.textContent=mode==='local'?'Só neste aparelho':w?'Salvando…':e?'Não salvo':'Salvo na nuvem'}
+  var s=$('sy');if(s){var w=sync==='saving'&&mode!=='setup',e=(sync!=='ok'||mode==='setup'||mode==='dead')&&!w;s.className='sync'+(mode==='local'||w?' w':e?' e':'');s.lastChild.textContent=mode==='local'?'Só neste aparelho':w?'Salvando…':e?'Não salvo':'Salvo na nuvem'}
 }
 function draw(){
   $('side').innerHTML='<div class="brand"><i>B</i>Bolso em Dia</div>'+tabsOn().map(function(t){return '<button class="nb'+(t[0]===tab?' on':'')+'" onclick="A.go(\''+t[0]+'\')">'+ic(t[0])+esc(t[1])+'</button>'}).join('');
